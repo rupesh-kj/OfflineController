@@ -14,7 +14,7 @@ define([
   "resources/js/IldceoCacheStrategies",
   "snowflake-id",
   'pouchDB',
-  "lodash"
+  "resources/js/lodash"
 ], function (
   ServiceWorkerHelpers,
   PersistenceManager,
