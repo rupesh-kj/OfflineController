@@ -138,7 +138,7 @@ define([
   };
 
   const OBJ_INSPECTION = {
-    SCOPE: "(/resources/latest/WxInspection_c/)([0-9]*)$",
+    SCOPE: "^(?!.*createInspection).*WxInspection_c.*",
     STORE: "WxInspection",
     ID_FIELD: "Id",
   };
