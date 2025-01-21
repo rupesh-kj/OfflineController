@@ -200,8 +200,8 @@ define([
       //end
       var self = this;
 
-      // Logger.option("level", Logger.LEVEL_LOG);
-      // Logger.option("writer", console);
+       Logger.option("level", Logger.LEVEL_LOG);
+       Logger.option("writer", console);
 
       PersistenceStoreManager.registerDefaultStoreFactory(
         PouchDBPersistenceStoreFactory
