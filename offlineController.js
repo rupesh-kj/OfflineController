@@ -108,7 +108,7 @@ define([
   };
 
   const OBJ_WO_WORKORDER_LINES = {
-    SCOPE: "/resources/latest/WxWorkOrderLines_c",
+    SCOPE: "^(?!.*(copyDiagnosticLine)).*/resources/latest/WxWorkOrderLines_c.*",
     STORE: "workOrderLines",
     ID_FIELD: "Id",
   };
