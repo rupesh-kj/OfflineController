@@ -2072,8 +2072,9 @@ define([
 
                     let offlineId = 0;
 
-                    // only do this for the assessmentLines
+                    // only do this for the inspectionLines
                     if (requestData.url.includes(OBJ_INSPECTIONLINE.SCOPE)) {
+                      // Extrating request body
                       let origReqObj = JSON.parse(requestData.body.text);
 
                       console.log("RRA---InspLine--->", origReqObj)
@@ -2098,7 +2099,7 @@ define([
                         const key = keys[k];
                         const storeResult = await store.findByKey(key);
 
-                        console.log('RRA---Store result for key', key, ':', storeResult);
+                        // console.log('RRA---Store result for key', key, ':', storeResult);
 
                         // Getting the correct record
                         if (
@@ -2149,7 +2150,7 @@ define([
                           console.log('RRA---Store result during re-update:', storeResult);
 
 
-                          if (offlineId == storeResult.Inspection_Id_c) {
+                          if (offlineId == storeResult.Id) {
                             console.log('RRA---Updating Inspection_Id_c for store result');
                             storeResult.Inspection_Id_c = JSON.parse(
                               responseData.body.text || "{}"
