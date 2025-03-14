@@ -2063,6 +2063,132 @@ define([
                   }
                 }
 
+                // For InspectionLine Line
+                if (requestData.url.includes(OBJ_INSPECTIONLINE.SCOPE)) {
+                  if (requestData.method === "POST") {
+                    // const body = JSON.parse(responseData.body.text || "{}");
+                    //('000 afterSyncRequestListener body', body);
+                    console.log('RRA---Processing POST request for Inspection Line:', requestData);
+
+                    let offlineId = 0;
+
+                    // only do this for the assessmentLines
+                    if (requestData.url.includes(OBJ_INSPECTIONLINE.SCOPE)) {
+                      let origReqObj = JSON.parse(requestData.body.text);
+
+                      console.log("RRA---InspLine--->", origReqObj)
+
+                      const inspId = origReqObj.Inspection_Id_c;
+                      const recordName = origReqObj.RecordName;
+
+                      console.log('RRA---InspLineIdRecName --->', { inspId, recordName });
+
+                      // Getting the inspLineStore
+                      const store = await PersistenceStoreManager.openStore(
+                        OBJ_INSPECTIONLINE.STORE
+                      );
+
+                      console.log('RRA---Opened the inspection line store:', store);
+
+                      const keys = await store.keys();
+
+                      console.log('RRA---Store keys:', keys);
+
+                      for (let k in keys) {
+                        const key = keys[k];
+                        const storeResult = await store.findByKey(key);
+
+                        console.log('RRA---Store result for key', key, ':', storeResult);
+
+                        // Getting the correct record
+                        if (
+                          recordName == storeResult.RecordName &&
+                          inspId ==
+                          storeResult.Inspection_Id_c &&
+                          storeResult.NewTempId
+                        ) {
+                          console.log('RRA---Inside If --->', storeResult.RecordName, storeResult.Inspection_Id_c);
+                          offlineId = storeResult.Id;
+                          console.log('RRA---OfflineID--->', offlineId);
+                        }
+                      }
+
+                      try {
+                        this.attachmentSync(
+                          offlineId,
+                          JSON.parse(responseData.body.text || "{}").Id
+                        );
+                      } catch (e) {
+                        console.error("000:: attachment sync error", e);
+                      }
+                      if (offlineId < 0) {
+                        //("000 afterSyncRequestListener offlineId storing...");
+                        PersistenceStoreManager.openStore(
+                          OBJ_SYNC_MAP.STORE
+                        ).then((store) => {
+                          store.upsert(
+                            offlineId,
+                            JSON.parse("{}"),
+                            JSON.parse(responseData.body.text || "{}").Id
+                          );
+                          console.log('RRA---Sync map data upserted.');
+                        });
+
+                        const store = await PersistenceStoreManager.openStore(
+                          // Check if this store is correct
+                          OBJ_INSPECTIONLINE.STORE
+                        );
+                        const keys = await store.keys();
+
+                        console.log('RRA---Store keys for re-update:', keys);
+
+                        for (let k in keys) {
+                          const key = keys[k];
+                          const storeResult = await store.findByKey(key);
+
+                          console.log('RRA---Store result during re-update:', storeResult);
+
+
+                          if (offlineId == storeResult.Inspection_Id_c) {
+                            console.log('RRA---Updating Inspection_Id_c for store result');
+                            storeResult.Inspection_Id_c = JSON.parse(
+                              responseData.body.text || "{}"
+                            ).Id;
+                          }
+                          PersistenceStoreManager.openStore(
+                            OBJ_INSPECTIONLINE.STORE
+                          ).then((store) => {
+                            console.log('RRA---Upserting updated inspection line store result:', storeResult);
+                            store.upsert(
+                              storeResult.Id,
+                              JSON.parse("{}"),
+                              storeResult
+                            );
+                          });
+                        }
+                      }
+                    }
+
+                    // delete record with temp id from cache
+                    console.log('RRA---Attempting to delete client cached object for offlineId:', offlineId);
+                    _deleteClientCachedObject(
+                      JSON.parse(requestData.body.text),
+                      OBJ_INSPECTIONLINE.STORE,
+                      OBJ_INSPECTIONLINE.ID_FIELD,
+                      offlineId
+                    ).then(() => {
+
+                      console.log('RRA---Client cached object deleted.');
+                      resolve({
+                        action: "continue",
+                      });
+                    }).catch((err) => {
+                      console.error('Error deleting client cached object:', err);
+                    });
+
+                  }
+                }
+
                 // For Batch Scope
                 if (requestData.url.includes(OBJ_BATCH.SCOPE)) {
                   if (requestData.method === "POST") {
@@ -2228,7 +2354,7 @@ define([
           return new Promise((resolve) => {
             PersistenceUtils.requestToJSON(event.request).then(
               async (requestData) => {
-                console.log("-->",requestData);
+                console.log("-->", requestData);
                 try {
                   PersistenceStoreManager.openStore(
                     'syncLog'
@@ -2392,6 +2518,96 @@ define([
                           resolve({ action: "replay", request: updatedRequest });
                         }
                       );
+                    } else if (requestData.url.includes(OBJ_INSPECTIONLINE.SCOPE)) {
+                      {
+                        let origReqObj = JSON.parse(requestData.body.text);
+
+                        console.log('RRA---PATCH Original Request Object:', origReqObj);
+
+                        if (requestData.method === "PATCH") {
+
+                          console.log('RRA---Processing PATCH request...');
+
+                          const updatedItemId = _getRequestUrlId(requestData.url);
+
+                          console.log('RRA---Updated Item ID:', updatedItemId);
+                          //('000 beforeSyncRequestListener updatedItemId', updatedItemId);
+                          let newResultId = 0;
+
+                          if (updatedItemId < 0) {
+
+                            console.log('RRA---Item ID is less than 0, looking up in sync map store...');
+
+                            const store = await PersistenceStoreManager.openStore(
+                              OBJ_SYNC_MAP.STORE
+                            );
+
+                            const newResultId = await store.findByKey(updatedItemId);
+
+                            console.log('RRA---Sync Map result:', newResultId);
+
+                            //('000 beforeSyncRequestListener newResultId', newResultId);
+
+                            if (newResultId) {
+                              //Error Fix Patch call of Assessment
+
+                              console.log('RRA---New Result ID found:', newResultId);
+                              requestData.url = _updateRequestUrlId(
+                                requestData.url,
+                                newResultId
+                              );
+
+                              console.log('RRA---Updated Request URL:', requestData.url);
+
+
+                              const store = await PersistenceStoreManager.openStore(
+                                OBJ_INSPECTIONLINE.STORE
+                              );
+                              const storeResult = await store.findByKey(newResultId);
+
+                              console.log('RRA---Store Result for New Result ID:', storeResult);
+
+                              //('000 beforeSyncRequestListener storeResult', storeResult);
+                              if (
+                                origReqObj.Inspection_Id_c == storeResult.Inspection_Id_c &&
+                                origReqObj.RecordName ==
+                                storeResult.RecordName &&
+                                storeResult.Id > 0
+                              ) {
+
+                                console.log('RRA---Matching store result found. Cleaning up payload for Fusion...');
+
+                                // clean up the payload for Fusion
+                                delete origReqObj.CreationDate;
+                                Object.keys(origReqObj).forEach(function (key) {
+                                  if (origReqObj[key] === null) {
+                                    origReqObj[key] = storeResult[key];
+                                  }
+                                });
+                                console.log('RRA---Payload after cleanup:', origReqObj);
+                              }
+
+                            } else {
+                              //("000 beforeSyncRequestListener OEC Id not found...");
+                              console.log("Skip Patch SYnMap");
+                              resolve({ action: "skip" });
+                            }
+                          }
+                        }
+
+                        requestData.body.text = JSON.stringify(origReqObj);
+
+                        console.log('RRA---Updated Request Body:', requestData.body.text);
+
+                        PersistenceUtils.requestFromJSON(requestData).then(
+                          (updatedRequest) => {
+                            
+                            console.log('RRA---Replay action triggered with updated request:', updatedRequest);
+
+                            resolve({ action: "replay", request: updatedRequest });
+                          }
+                        );
+                      }
                     } else if (
                       scopeReg.test(requestData.url)
                     ) {
