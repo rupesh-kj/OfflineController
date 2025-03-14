@@ -108,7 +108,7 @@ define([
   };
 
   const OBJ_WO_WORKORDER_LINES = {
-    SCOPE: "^(?!.*(copyDiagnosticLine)).*/resources/latest/WxWorkOrderLines_c.*",
+    SCOPE: "/resources/latest/WxWorkOrderLines_c",
     STORE: "workOrderLines",
     ID_FIELD: "Id",
   };
@@ -200,8 +200,8 @@ define([
       //end
       var self = this;
 
-      // Logger.option("level", Logger.LEVEL_LOG);
-      // Logger.option("writer", console);
+      Logger.option("level", Logger.LEVEL_LOG);
+      Logger.option("writer", console);
 
       PersistenceStoreManager.registerDefaultStoreFactory(
         PouchDBPersistenceStoreFactory
